@@ -1,0 +1,184 @@
+ 入口
+    
+    compile project(':face-unity')
+
+**LeakCanary.java**
+
+    public static RefWatcher install(Application application) {
+        return install(application, DisplayLeakService.class);
+    }
+
+其中DisPlayLeakService就是通知栏展示列表的那个service
+
+    public static RefWatcher install(Application application, Class<? extends AbstractAnalysisResultService> listenerServiceClass) {
+        //如果已经在分析线程直接返回
+        if(isInAnalyzerProcess(application)) {
+            return RefWatcher.DISABLED;
+        } else {
+            //启用displayLeakActivity,用于展示内存泄漏时通知栏的列表
+            enableDisplayLeakActivity(application);
+            ServiceHeapDumpListener heapDumpListener = new ServiceHeapDumpListener(application, listenerServiceClass);
+            RefWatcher refWatcher = androidWatcher(application, heapDumpListener);
+            ActivityRefWatcher.installOnIcsPlus(application, refWatcher);
+            return refWatcher;
+        }
+    }
+
+
+生成一个RefWatcher对象和ActivityRefWatcher对象.ActivityRefWatcher顾名思义就是针对Activity的监察者。
+
+**ActivityRefWatcher.java**
+
+    private final ActivityLifecycleCallbacks lifecycleCallbacks = new ActivityLifecycleCallbacks() {
+        public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
+        }
+
+        public void onActivityStarted(Activity activity) {
+        }
+
+        public void onActivityResumed(Activity activity) {
+        }
+
+        public void onActivityPaused(Activity activity) {
+        }
+
+        public void onActivityStopped(Activity activity) {
+        }
+
+        public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
+        }
+
+        public void onActivityDestroyed(Activity activity) {
+            ActivityRefWatcher.this.onActivityDestroyed(activity);
+        }
+    };
+    private final Application application;
+    private final RefWatcher refWatcher;
+
+    public static void installOnIcsPlus(Application application, RefWatcher refWatcher) {
+        if(VERSION.SDK_INT >= 14) {
+            ActivityRefWatcher activityRefWatcher = new ActivityRefWatcher(application, refWatcher);
+            activityRefWatcher.watchActivities();
+        }
+    }
+
+    public ActivityRefWatcher(Application application, RefWatcher refWatcher) {
+        this.application = (Application)Preconditions.checkNotNull(application, "application");
+        this.refWatcher = (RefWatcher)Preconditions.checkNotNull(refWatcher, "refWatcher");
+    }
+
+    void onActivityDestroyed(Activity activity) {
+        this.refWatcher.watch(activity);
+    }
+
+    public void watchActivities() {
+        this.stopWatchingActivities();
+        this.application.registerActivityLifecycleCallbacks(this.lifecycleCallbacks);
+    }
+
+    public void stopWatchingActivities() {
+        this.application.unregisterActivityLifecycleCallbacks(this.lifecycleCallbacks);
+    }
+
+这段代码很好理解,在`ActivityLifecycleCallbacks`中的`onActivityDestroyed`的阶段,使用`refWatcher`对象对activity进行观察。
+
+另外`watchActivities()`这段代码再每次设置监听的时候都会先做一次反注册操作
+
+    public void watchActivities() {
+        this.stopWatchingActivities();
+        this.application.registerActivityLifecycleCallbacks(this.lifecycleCallbacks);
+    }
+
+
+**RefWatcher.java**
+
+    public void watch(Object watchedReference, String referenceName) {
+        Preconditions.checkNotNull(watchedReference, "watchedReference");
+        Preconditions.checkNotNull(referenceName, "referenceName");
+        //debug状态时,忽略这次检测,因为Debugger可能会持有一些在当前上下文中不可见的对象，导致误判
+        if(!this.debuggerControl.isDebuggerAttached()) {
+            final long watchStartNanoTime = System.nanoTime();
+            String key = UUID.randomUUID().toString();
+            this.retainedKeys.add(key);
+            final KeyedWeakReference reference = new KeyedWeakReference(watchedReference, key, referenceName, this.queue);
+            this.watchExecutor.execute(new Runnable() {
+                public void run() {
+                    RefWatcher.this.ensureGone(reference, watchStartNanoTime);
+                }
+            });
+        }
+    }
+
+其中`watchedReference`为检测的对象,可以是Object下的任意对象,本例中为activity.
+重点看下面这段代码,
+
+    final KeyedWeakReference reference = new KeyedWeakReference(watchedReference, key, referenceName, this.queue);
+
+将`watchedReference`加入到一个`ReferenceQueue`的队列中。
+
+     this.watchExecutor.execute(new Runnable() {
+                public void run() {
+            RefWatcher.this.ensureGone(reference, watchStartNanoTime);
+        }
+    });
+
+执行`watchExecutor`内存检测
+
+
+**ensureGone函数**
+
+    void ensureGone(KeyedWeakReference reference, long watchStartNanoTime) {
+        long gcStartNanoTime = System.nanoTime();
+        long watchDurationMs = TimeUnit.NANOSECONDS.toMillis(gcStartNanoTime - watchStartNanoTime);
+        //清除所有添加到ReferenceQueue中的弱引用
+        this.removeWeaklyReachableReferences();
+        if(!this.gone(reference) && !this.debuggerControl.isDebuggerAttached()) {
+            this.gcTrigger.runGc();
+            this.removeWeaklyReachableReferences();
+            if(!this.gone(reference)) {
+                long startDumpHeap = System.nanoTime();
+                long gcDurationMs = TimeUnit.NANOSECONDS.toMillis(startDumpHeap - gcStartNanoTime);
+                File heapDumpFile = this.heapDumper.dumpHeap();
+                if(heapDumpFile == null) {
+                    return;
+                }
+
+                long heapDumpDurationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startDumpHeap);
+                this.heapdumpListener.analyze(new HeapDump(heapDumpFile, reference.key, reference.name, watchDurationMs, gcDurationMs, heapDumpDurationMs));
+            }
+
+        }
+    } 
+    
+    
+    private boolean gone(KeyedWeakReference reference) {
+        return !this.retainedKeys.contains(reference.key);
+    }    
+
+代码中会两次调用这个函数,  
+第一次会在removeWeaklyReachableReferences之后调用,手动remove队列中存在的引用  
+第二次会在gcTrigger.runGc();之后调用,建议Android系统进行GC,之后再判断是否还有对应的引用存在.
+
+两次判断过后还存在的话,进入日志分析阶段。
+
+
+
+### 补充 ###
+    //精确到毫微秒,多用于代码与代码之间的时间间隔
+    System.nanoTime()
+    //时钟,可用于表示当前时间
+    System.currentTimeMillis();
+    //表示设备开机到当前的截止时间
+    SystemClock.uptimeMillis();
+
+
+
+
+[开源项目之LeakCanary源码分析](https://www.jianshu.com/p/5032c52c6b0a)
+
+
+[深入理解 Android 之 LeakCanary 源码解析](http://allenwu.itscoder.com/leakcanary-source)
+
+[从源码的角度深入理解LeakCanary的内存泄露检测机制](https://blog.csdn.net/llew2011/article/details/52089842)
+
+[利用 LeakCanary 来检查 Android 内存泄漏](https://www.jianshu.com/p/0049e9b344b0)
