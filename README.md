@@ -82,6 +82,15 @@
 [史上最全WebView使用，附送Html5Activity一份](https://blog.csdn.net/qq_17766199/article/details/71698593)  
 [深度学习js与安卓的交互以及WebView的那些坑](https://juejin.im/post/5a30f5195188253ee45b7048)
 
+
+### 实用部分 ###
+[Android 中 tools 命名的使用案例](https://github.com/xiaweizi/AndroidToolsExample)
+[Android 开发小技巧](https://github.com/jiang111/awesome-android-tips)  
+[Android常见问题集锦](https://blog.csdn.net/xiaoyaoyou1212/article/details/51045814)
+[Android 开发中的日常积累](https://github.com/lizhangqu/CoreLink)
+[view阴影效果](https://juejin.im/post/5ae1ba4d6fb9a07acc116b8d)
+
+
 ### 未分组 ###
 
 [Android lint增量扫描](http://www.jianshu.com/p/4833a79e9396)  
@@ -89,18 +98,14 @@
 [2018年值得关注的开源Android库和项目](https://www.oschina.net/translate/25-new-android-libraries-and-projects-2018)
 
 
-[Android 开发小技巧](https://github.com/jiang111/awesome-android-tips)  
-[Android常见问题集锦](https://blog.csdn.net/xiaoyaoyou1212/article/details/51045814)
-
-
 [Android 系统级源码导读 基于7.0](https://github.com/BeesAndroid/BeesAndroid)
 
 [token 认证的来龙去脉](https://juejin.im/post/5a6c60166fb9a01caf37a5e5)
 
-[Android 开发中的日常积累](https://github.com/lizhangqu/CoreLink)
+
 
 [插件化对比](插件化方案对比)
 
-[view阴影效果](https://juejin.im/post/5ae1ba4d6fb9a07acc116b8d)
+
 
 
