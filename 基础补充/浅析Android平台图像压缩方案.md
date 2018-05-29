@@ -1,4 +1,4 @@
-### 浅析Android平台图像压缩方案 ###
+
 在介绍Android平台的压缩方案之前,先了解一下Bitmap的几个主要概念。
 
 > 像素密度
@@ -16,13 +16,13 @@
 
     memory=scaledWidth*scaledHeight*每个像素所占字节数
 
-其中
-scaledWidth :  width*targetDensity/density+0.5
+其中  
+scaledWidth :  width*targetDensity/density+0.5  
 scaledHeight： height*targetDensity/density+0.5
 
-- `scaledWidth`表示水平方向的像素值,
-- `width`表示屏幕宽度,
-- `targetDensity`表示手机的像素密度,这个值一般跟手机相关,
+- `scaledWidth`表示水平方向的像素值,  
+- `width`表示屏幕宽度,  
+- `targetDensity`表示手机的像素密度,这个值一般跟手机相关,  
 - `density`表示decodingBitmap 的 density,这个值一般跟图片放置的目录有关(hdpi/xxhdpi)
 
 scaledHeight同理
@@ -50,7 +50,7 @@ scaledHeight同理
 一般图像的色彩空间为**RGB**,主要通过RGB三原色通道来描述图片,其中又有**ARGB**格式,比起RGB多了一个透明度的通道。
 
 Android下的质量压缩主要通过下面这个函数来实现的。
-
+	
 	bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
 
 三个参数
@@ -62,7 +62,7 @@ Android下的质量压缩主要通过下面这个函数来实现的。
 其中PNG是无损格式的,压缩效果不太理想,而WEBP会存在兼容性的问题。出于兼容性和效果来看，一般会选择JPEG作为压碎格式。
 
 **实例代码**
-
+	
 	// R.drawable.thumb 为 png 图片
 	Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.thumb);
 	try {
@@ -88,11 +88,11 @@ Android下的质量压缩主要通过下面这个函数来实现的。
 	Bitmap compress = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
 	Log.i(TAG, "onCreate: bitmap.size = " + bitmap.getByteCount() + "   compress.size = " + compress.getByteCount());
 
-我们再来看看`quality`参数被设置为50前后,两张图片的对比.
-**压缩前的图片**
+我们再来看看`quality`参数被设置为50前后,两张图片的对比.  
+**压缩前的图片**  
 ![](http://www.52im.net/data/attachment/forum/201711/14/124552zwnonwd0200dxjgu.jpg)
 
-**压缩后的图片**
+**压缩后的图片**  
 ![](http://www.52im.net/data/attachment/forum/201711/14/124552w5duhwwqdutpbdnn.jpg)
 
 从上述两图可以明显图片质量的差别,另外再通过log打印查看会压缩前后图片的所占用的大小是一样的。
@@ -100,23 +100,25 @@ Android下的质量压缩主要通过下面这个函数来实现的。
 即
 
 	bitmap.size = compress.size
+	
+**Q:**这里可能有人就会有疑惑,为什么压缩过后,两张图片的大小还会是一样的呢？
 
-这里可能有人就会有疑惑,为什么压缩过后,两张图片的大小还会是一样的呢？
-
-因为图片在内存中的存储方式和文件中的存储方式是不一样的。图片压缩只会影响文件的大小,在这个例子中,压缩过来的文件大小会比压缩之前的文件大小减小很多。
+**A:**因为图片在内存中的存储方式和文件中的存储方式是不一样的。图片压缩只会影响文件的大小,在这个例子中,压缩过后存到磁盘的文件大小会比压缩之前的文件大小减小很多。
 
 内存中所占的大小没有变化是因为bitmap没有变化的原因。
 
-文章最开始提到Bitmap的计算方式
+**文章最开始提到Bitmap的计算方式**
 
 	memory=scaledWidth*scaledHeight*每个像素所占字节数
 
 因为是压缩的质量,所有宽高都不变,而每个像素所占的字节数跟色彩空间有关,默认是`ARGB_8888`.宽高不变,色彩空间不重新设置,那么bitmap所占的大小就不会发生改变。
 
-说道这里可能又会有个疑问,bitmap占用的大小不变,那为什么图片质量下降了呢？这是因为图片被压缩过了啊!
+说道这里可能又会有个新疑问  
 
-首先要知道JPEG格式是有损压缩的,JPEG格式的图片是不支持透明色彩的,这也是JPEG的大小会比PNG小很大,图片质量会比PNG差的原因。
-在经过了`bitmap.compress()`这个流程时,JPEG会舍去透明属性.这样存放到磁盘时的文件大小就减小了.然后这个时候再通过`BitmapFactory.decodeByteArray()`把图片加载回来时,加载的是舍去了透明通道的图片,按理说应该采用 `RGB_565`或者`RGB_888`这样的色彩空间加载,但是你没有另外设置这个参数的话,加载的色彩格式会是`ARGB_8888`.图片都没有透明的色彩空间了,你再给它分配内存就只是浪费内存而已。
+**Q:**bitmap占用的大小不变,那为什么图片质量下降了呢？这是因为图片被压缩过了啊!
+
+**A:**首先要知道JPEG格式是有损压缩的,JPEG格式的图片是不支持透明色彩的,这也是JPEG的大小会比PNG小很大,图片质量会比PNG差的原因。
+在经过了`bitmap.compress()`这个流程时,JPEG会舍去透明属性.这样存放到磁盘时的文件大小就减小了.然后这个时候再通过`BitmapFactory.decodeByteArray()`把图片加载回来时,加载的是舍去了透明通道的图片,按理说应该采用 `RGB_565`或者`RGB_888`这样的色彩空间加载,但是你没有另外设置这个参数的话,加载的色彩格式会是默认`ARGB_8888`.图片都没有透明的色彩空间了,你再给它分配内存就只是浪费内存而已。
 
 这也是为什么压缩前后,bitmap所占的大小相同,图片质量却有所差距的原因。
 
@@ -149,13 +151,13 @@ GIF图像最广泛的应用是用于显示动画图像，它具备文件小且�
 
 随着版本的变化以及存储空间的变化，Bitmap的存储空间主要有三个地方
 
-**Native Memory**
-Android2.3以下版本，bitmap像素数据存储在native内存中，释放内存需主动调用recycle()方法
+**Native Memory**  
+Android2.3以下版本，bitmap像素数据存储在native内存中，释放内存需主动调用recycle()方法  
 
-**Dalvik Heap**
-Android3.0+版本，在Android2.3版本引入了并发的垃圾回收器后，在3.0以后的版本bitmap的像素数据则存储在虚拟机堆中，不需要主动调用recycle()来回收内存，gc会主动回收
+**Dalvik Heap**  
+Android3.0+版本，在Android2.3版本引入了并发的垃圾回收器后，在3.0以后的版本bitmap的像素数据则存储在虚拟机堆中，不需要主动调用recycle()来回收内存，gc会主动回收  
 
-**Ashmem**
+**Ashmem**  
 匿名共享内存空间，说到这个，就会联想起大名鼎鼎的Fresco图片库，它巧妙的利用了这一空间来进行Bitmap对象的存储，对于Ashmem空间，首先想到的是与App进程空间是隔离且互不影响的，这点在Android4.4以下版本是这样的，在Android4.4+后版本，Ashmem空间将会包含在App所占用的内存空间中。看Fresco源码也可以看出，对于4.4+版本，对于Bitmap的解码使用了另外的解码器。在Android4.4以下版本如何使用Ashmem进行bitmap的存储呢？通过DecodeOptions：
 
 
@@ -180,7 +182,7 @@ Android3.0+版本，在Android2.3版本引入了并发的垃圾回收器后，�
 
 其中`options.inSampleSize`的值代表着压缩后一个像素点代替原来的几个像素点,比如`options.inSampleSize=2`,一个像素点会代替原来的2个像素点,注意这里的2个像素点仅仅指水平方向或者竖直方向上的。即原来2x2的像素,压缩后仅使用一个像素点来代替。
 
-网上找了张图
+网上找了张图  
 
 **压缩前的图片**
 
@@ -210,7 +212,7 @@ Android3.0+版本，在Android2.3版本引入了并发的垃圾回收器后，�
 	matrix.setScale(0.5f, 0.5f);
 	bm = Bitmap.createBitmap(bitmap, 0, 0, bit.getWidth(), bit.getHeight(), matrix, true);
 
-**压缩效果**
+**压缩效果**  
 
 压缩前
 
@@ -236,40 +238,21 @@ Android3.0+版本，在Android2.3版本引入了并发的垃圾回收器后，�
 
 > Lanczos 采样和 Lanczos 过滤是 Lanczos 算法的两种常见应用，它可以用作低通滤波器或者用于平滑地在采样之间插入数字信号，Lanczos 采样一般用来增加数字信号的采样率，或者间隔采样来降低采样率。
 
-关于采样效果,网上有人做个对比,对于图片的压缩效果,从低到高依次是
+### 采样效果 从低到高依次 ###
 
 邻近采样--双线性采样--双立方／双三次采样--Lanczos 采样
 
 
-
-[也谈图片压缩](http://zhengxiaoyong.me/2017/04/23/%E4%B9%9F%E8%B0%88%E5%9B%BE%E7%89%87%E5%8E%8B%E7%BC%A9/)  
-
-
-
-[QQ音乐团队分享：Android中的图片压缩技术详解](http://www.52im.net/thread-1208-1-1.html)
-
-
-
-[为什么图片反复压缩后会普遍会变绿而不是其他颜色](https://www.zhihu.com/question/29355920)
-
-
-
-[图片压缩原理](https://blog.csdn.net/u012416928/article/details/41542695)
-
-
-
-[Android之优雅地加载大图片](https://www.jianshu.com/p/0f56f35068e2)
-
-
-
-[探索Bitmap使用姿势](https://lizhaoxuan.github.io/2017/07/11/%E6%8E%A2%E7%B4%A2Bitmap%E4%BD%BF%E7%94%A8%E5%A7%BF%E5%8A%BF/)
-
-
-
-
-
+[Android平台图像压缩方案](https://juejin.im/post/5a1bd6595188254cc067981f)  
+[QQ音乐团队分享：Android中的图片压缩技术详解](http://www.52im.net/thread-1208-1-1.html)  
+[也谈图片压缩](http://zhengxiaoyong.me/2017/04/23/%E4%B9%9F%E8%B0%88%E5%9B%BE%E7%89%87%E5%8E%8B%E7%BC%A9/)   
+[为什么图片反复压缩后会普遍会变绿而不是其他颜色](https://www.zhihu.com/question/29355920)  
+[Android之优雅地加载大图片](https://www.jianshu.com/p/0f56f35068e2)  
 [内存占用/GPU渲染性能优化手记](https://wangfuda.github.io/2017/07/09/nebula_gpu_monitor_optimize/)
 
+### 另外 ###
+
+[个人的github](https://github.com/niknowzcd/AndroidNote)  
+[闲暇之余写的故事](https://book.qidian.com/info/1011888583)
 
 
-[Android平台图像压缩方案](https://juejin.im/post/5a1bd6595188254cc067981f)
