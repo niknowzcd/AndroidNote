@@ -60,6 +60,8 @@
 [Android工程模块化平台的设计](https://mp.weixin.qq.com/s/adT8BAO5d8gC5fCfsja_gg)
 
 ### 组件化 ###
+[阿里ARouter开源组件化框架项目实践](https://www.jianshu.com/p/735c969fdd9d)
+[组件化框架调研和思考](https://www.jianshu.com/p/0d45f2a894ba)
 [组件化多进程通信](http://blog.spinytech.com/2017/02/03/ma_get_start_en/)  
 [人人都能组件化](https://www.jianshu.com/p/81d2e0132a10)  
 [谁阻碍了你做组件化开发？](https://juejin.im/post/5a954c2cf265da4e9957b785)  
