@@ -182,3 +182,5 @@
 [从源码的角度深入理解LeakCanary的内存泄露检测机制](https://blog.csdn.net/llew2011/article/details/52089842)
 
 [利用 LeakCanary 来检查 Android 内存泄漏](https://www.jianshu.com/p/0049e9b344b0)
+
+[浅析WeakHashMap](https://droidyue.com/blog/2018/07/23/a-briefing-looking-at-weakhashmap/)
