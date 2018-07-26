@@ -15,6 +15,10 @@
 [各类文章整理(kotlin,插件化,RxJava等)](https://juejin.im/user/5951dc04f265da6c3901e96e)  
 [http://blog.csdn.net/carson_ho](rxjava,glide等)  
 
+[RxJava 资料集合](https://github.com/lzyzsd/Awesome-RxJava)
+[kotlin资料集合](https://juejin.im/post/591dd9f544d904006c9fbb96)
+
+
 
 
 ### 第三方库 ###
