@@ -57,6 +57,7 @@
 
 
 ### 一热三化 ###
+[Android组件化最佳实践](https://juejin.im/post/5b5f17976fb9a04fa775658d)
 
 **模块化**  
 [Android工程化实践：模块化](https://juejin.im/post/5ab37cd3f265da238d50a0e6)  
